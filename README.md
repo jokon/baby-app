@@ -1,1 +1,1 @@
-Simple application for the smalest children!
+Simple application for the smallest children!
