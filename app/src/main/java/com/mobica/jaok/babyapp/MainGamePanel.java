@@ -5,7 +5,6 @@ import android.content.Context;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.Paint;
 import android.media.MediaPlayer;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -27,7 +26,7 @@ import java.util.Map;
 public class MainGamePanel extends SurfaceView implements SurfaceHolder.Callback {
 
     public static final String CLASS_NAME = MainGamePanel.class.getSimpleName();
-    public static final int BOTTOM_HEIGHT_TO_EXIT = 100;
+    public static final int SIZE_TO_EXIT = 100;
 
     private MainThread thread;
 
@@ -52,20 +51,7 @@ public class MainGamePanel extends SurfaceView implements SurfaceHolder.Callback
         //canvas.drawBitmap(BitmapFactory.decodeResource(getResources(), R.mipmap.ant), 20, 20, null);
 
         canvas.drawColor(Color.BLACK);
-        drawBottomLine(canvas);
         drawSymbols(canvas);
-    }
-
-    private void drawBottomLine(Canvas canvas) {
-//        Log.d(CLASS_NAME, "Line drawing...");
-        Paint paint = new Paint();
-        paint.setAntiAlias(true);
-        paint.setStrokeWidth(6f);
-        paint.setColor(Color.RED);
-        paint.setStyle(Paint.Style.STROKE);
-        paint.setStrokeJoin(Paint.Join.ROUND);
-        //p.setColor(Color.RED);
-        canvas.drawLine(0, getHeight() - BOTTOM_HEIGHT_TO_EXIT, getWidth(), getHeight() - BOTTOM_HEIGHT_TO_EXIT + 1, paint);
     }
 
     private void drawSymbols(Canvas canvas) {
@@ -144,35 +130,52 @@ public class MainGamePanel extends SurfaceView implements SurfaceHolder.Callback
     private void handleActionDown(MotionEvent event) {
         Log.d(CLASS_NAME, String.format("Touched coordinates are: %f %f; (%f)", event.getX(), event.getY(), getHeight() - event.getY()));
 
-        if (event.getY() > getHeight() - BOTTOM_HEIGHT_TO_EXIT) {
+        activateClose(event.getX(), event.getY());
+
+
+        Symbol symbol = findTouchedSymbol((int) event.getX(), (int) event.getY());
+        if (symbol != null) {
+            Log.d(CLASS_NAME, "You touched existing symbol (" +symbol+ ")");
+            setTouchedSymbol(symbol);
+        } else {
+            Log.d(CLASS_NAME, "Creating new symbol...");
+
+            Symbol.SymbolSpecific exampleSymbol = Symbol.getExample();
+
+            int resource = getResourceId(exampleSymbol.getName(), "mipmap");
+
+            if (resource != 0) {
+                symbol = new Symbol(BitmapFactory.decodeResource(getResources(), resource), (int) event.getX(), (int) event.getY(), true);
+
+
+                MediaPlayer mp = getSoundForSymbol(exampleSymbol);
+                if (mp != null)
+                    mp.start();
+
+                synchronized (symbols) {
+                    getSymbols().add(symbol);
+                }
+                setTouchedSymbol(symbol);
+            }
+        }
+    }
+
+    private boolean activatedClose = false;
+
+    private void activateClose(float x, float y) {
+        if (y > getHeight() - SIZE_TO_EXIT) {
+            activatedClose = true;
+        } else {
+            activatedClose = false;
+        }
+    }
+
+    private void confirmClose(float x, float y) {
+        if (activatedClose && y < SIZE_TO_EXIT) {
             thread.setRunning(false);
             ((Activity)getContext()).finish();
         } else {
-            Symbol symbol = findTouchedSymbol((int) event.getX(), (int) event.getY());
-            if (symbol != null) {
-                Log.d(CLASS_NAME, "You touched existing symbol (" +symbol+ ")");
-                setTouchedSymbol(symbol);
-            } else {
-                Log.d(CLASS_NAME, "Creating new symbol...");
-
-                Symbol.SymbolSpecific exampleSymbol = Symbol.getExample();
-
-                int resource = getResourceId(exampleSymbol.getName(), "mipmap");
-
-                if (resource != 0) {
-                    symbol = new Symbol(BitmapFactory.decodeResource(getResources(), resource), (int) event.getX(), (int) event.getY(), true);
-
-
-                    MediaPlayer mp = getSoundForSymbol(exampleSymbol);
-                    if (mp != null)
-                        mp.start();
-
-                    synchronized (symbols) {
-                        getSymbols().add(symbol);
-                    }
-                    setTouchedSymbol(symbol);
-                }
-            }
+            activatedClose = false;
         }
     }
 
@@ -181,10 +184,10 @@ public class MainGamePanel extends SurfaceView implements SurfaceHolder.Callback
 
         if (mp == null) {
             int soundResource = getResourceId(exampleSymbol.getSound(), "raw");
-            if (soundResource != 0)
+            if (soundResource != 0) {
                 mp = MediaPlayer.create(getContext().getApplicationContext(), soundResource);
-
-            symbolSounds.put(exampleSymbol, mp);
+                symbolSounds.put(exampleSymbol, mp);
+            }
         }
 
         return mp;
@@ -215,6 +218,7 @@ public class MainGamePanel extends SurfaceView implements SurfaceHolder.Callback
 
     private void handleActionUp(MotionEvent event) {
         Log.d(CLASS_NAME, String.format("Up coordinates are: %f %f", event.getX(), event.getY()));
+        confirmClose(event.getX(), event.getY());
     }
 
     public List<Symbol> getSymbols() {

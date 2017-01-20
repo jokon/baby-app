@@ -1,21 +1,19 @@
 package com.mobica.jaok.babyapp.model;
 
-import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 
-import com.mobica.jaok.babyapp.R;
-
 /**
  * Created by jaok on 2016-03-08.
  */
 public class Symbol implements Comparable{
-    private static final int MIN_HEIGHT = 100;
-    private static final int MIN_WIDTH = 100;
-    private static final int LIVETIME = 60;
-    private static final int DISAPEARING_TIME = 10;
+    private int MAX_HEIGHT = 250;
+    private int minHeight;
+    private int minWidth;
+    private static final int LIVETIME = 100;
+    private static final int DISAPEARING_TIME = 8;
 
     private Bitmap scaledBitmap;
     private Bitmap bitmap;
@@ -28,8 +26,8 @@ public class Symbol implements Comparable{
 
     //private int rotation = 0;
     private int currentAlpha = 255;
-    private int maxHeight = 500;
-    private int maxWidth = 500;
+    private int height = 400;
+    private int width = 400;
 
     static int numberCount = 0;
 
@@ -39,7 +37,15 @@ public class Symbol implements Comparable{
         this.touched = true;
         this.number = numberCount ++;
 
-        this.bitmap = rotateBitmapRandomly(bitmap);
+        Double proportion = bitmap.getHeight() / new Double(bitmap.getWidth());
+
+        height = Math.min(bitmap.getHeight(), MAX_HEIGHT);
+        width =  ((Double) (height/proportion)).intValue();
+
+        minHeight = height /2;
+        minWidth = width /2;
+
+        this.bitmap = bitmap; //rotateBitmapRandomly(bitmap);
         update();
     }
 
@@ -77,8 +83,8 @@ public class Symbol implements Comparable{
     private Bitmap resizeBitmap(Bitmap bitmap) {
         double sizingTime = LIVETIME - DISAPEARING_TIME;
         int currentSizeProgress = age - DISAPEARING_TIME >= 0 ? age - DISAPEARING_TIME : 0;
-        int height = MIN_HEIGHT + (int)(((sizingTime - currentSizeProgress)/sizingTime) * (double) (maxHeight - MIN_HEIGHT));
-        int width = MIN_WIDTH + (int)(((sizingTime - currentSizeProgress)/sizingTime) * (double) (maxWidth - MIN_WIDTH));
+        int height = minHeight + (int)(((sizingTime - currentSizeProgress)/sizingTime) * (double) (this.height - minHeight));
+        int width = minWidth + (int)(((sizingTime - currentSizeProgress)/sizingTime) * (double) (this.width - minWidth));
 
         Bitmap scaledBitmap = Bitmap.createScaledBitmap(bitmap, width, height, true);
 
@@ -184,7 +190,8 @@ public class Symbol implements Comparable{
 
     public enum SymbolSpecific {
 
-        BEE, BIRD, BULLDOG("dog"), DUCK, ELEPHANT, LION, MONKEY, OWL, SHEEP,SNAKE, COW, PIG
+        BEE, BIRD, BULLDOG("dog"), DUCK, ELEPHANT, LION, MONKEY, OWL, SHEEP,SNAKE, COW, PIG,
+        BEAR, DADDY, EMILY, FERNANDO, GORGE, MASZA, MUMMY, PEPPA
         //BULL, FISH, FROG, MOUSE, WOLF
         ;
 
